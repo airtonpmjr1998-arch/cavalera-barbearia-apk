@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cavalera Barbearia</string>
+    <string name="error_title">Sem conexão</string>
+    <string name="error_message">Não foi possível abrir a Cavalera Barbearia. Verifique sua internet e tente novamente.</string>
+    <string name="retry">Tentar novamente</string>
+    <string name="config_error_title">Configuração pendente</string>
+    <string name="config_error_message">Defina a variável WEB_APP_URL no GitHub com a URL /exec do seu Google Apps Script.</string>
+</resources>

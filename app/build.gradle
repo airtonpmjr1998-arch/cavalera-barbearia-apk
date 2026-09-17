@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.application'
+}
+
+def webAppUrl = providers
+    .gradleProperty("WEB_APP_URL")
+    .orElse("https://example.invalid/")
+    .get()
+
+def escapedWebAppUrl = webAppUrl
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+
+android {
+    namespace 'br.com.cavalerabarbearia.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "br.com.cavalerabarbearia.app"
+        minSdk 24
+        targetSdk 36
+
+        versionCode 1
+        versionName "1.0.0"
+
+        buildConfigField "String", "WEB_APP_URL", "\"${escapedWebAppUrl}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

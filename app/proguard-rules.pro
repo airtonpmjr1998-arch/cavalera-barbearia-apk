@@ -1,2 +1,1 @@
-# Projeto simples baseado em WebView.
-# Nenhuma regra adicional necessária neste momento.
+# Projeto WebView simples. Nenhuma regra extra necessária.

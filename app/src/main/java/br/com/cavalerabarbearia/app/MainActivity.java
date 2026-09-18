@@ -29,7 +29,6 @@ public class MainActivity extends Activity {
     private View errorPanel;
     private TextView errorTitle;
     private TextView errorMessage;
-    private Button retryButton;
 
     private String startUrl;
 
@@ -46,7 +45,7 @@ public class MainActivity extends Activity {
         errorPanel = findViewById(R.id.errorPanel);
         errorTitle = findViewById(R.id.errorTitle);
         errorMessage = findViewById(R.id.errorMessage);
-        retryButton = findViewById(R.id.retryButton);
+        Button retryButton = findViewById(R.id.retryButton);
 
         startUrl = BuildConfig.WEB_APP_URL == null
                 ? ""
@@ -56,7 +55,7 @@ public class MainActivity extends Activity {
 
         configureWebView();
 
-        if (!isValidWebAppUrl(startUrl)) {
+        if (!isValidStartUrl(startUrl)) {
             showConfigurationError();
             return;
         }
@@ -86,13 +85,10 @@ public class MainActivity extends Activity {
         settings.setSupportMultipleWindows(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
-        String currentUserAgent = settings.getUserAgentString();
+        String userAgent = settings.getUserAgentString();
 
-        if (currentUserAgent != null &&
-                !currentUserAgent.contains("CavaleraBarbeariaAPK")) {
-            settings.setUserAgentString(
-                    currentUserAgent + " CavaleraBarbeariaAPK/1.0"
-            );
+        if (userAgent != null && !userAgent.contains("CavaleraBarbeariaAPK")) {
+            settings.setUserAgentString(userAgent + " CavaleraBarbeariaAPK/1.0");
         }
 
         CookieManager cookieManager = CookieManager.getInstance();
@@ -105,12 +101,9 @@ public class MainActivity extends Activity {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 progressBar.setProgress(newProgress);
-
-                if (newProgress >= 100) {
-                    progressBar.setVisibility(View.GONE);
-                } else {
-                    progressBar.setVisibility(View.VISIBLE);
-                }
+                progressBar.setVisibility(
+                        newProgress >= 100 ? View.GONE : View.VISIBLE
+                );
             }
 
             @Override
@@ -120,21 +113,22 @@ public class MainActivity extends Activity {
                     boolean isUserGesture,
                     Message resultMsg
             ) {
-                final WebView popupWebView =
-                        new WebView(MainActivity.this);
+                WebView popup = new WebView(MainActivity.this);
 
-                popupWebView.setWebViewClient(new WebViewClient() {
+                popup.setWebViewClient(new WebViewClient() {
                     private boolean handled = false;
 
-                    private boolean handleOnce(Uri uri) {
+                    private boolean handle(Uri uri) {
                         if (handled || uri == null) {
                             return true;
                         }
 
                         handled = true;
                         handlePopupUri(uri);
-                        popupWebView.stopLoading();
-                        popupWebView.destroy();
+
+                        popup.stopLoading();
+                        popup.destroy();
+
                         return true;
                     }
 
@@ -143,7 +137,7 @@ public class MainActivity extends Activity {
                             WebView view,
                             WebResourceRequest request
                     ) {
-                        return handleOnce(request.getUrl());
+                        return handle(request.getUrl());
                     }
 
                     @Override
@@ -151,7 +145,7 @@ public class MainActivity extends Activity {
                             WebView view,
                             String url
                     ) {
-                        return handleOnce(Uri.parse(url));
+                        return handle(Uri.parse(url));
                     }
 
                     @Override
@@ -160,14 +154,14 @@ public class MainActivity extends Activity {
                             String url,
                             Bitmap favicon
                     ) {
-                        handleOnce(Uri.parse(url));
+                        handle(Uri.parse(url));
                     }
                 });
 
                 WebView.WebViewTransport transport =
                         (WebView.WebViewTransport) resultMsg.obj;
 
-                transport.setWebView(popupWebView);
+                transport.setWebView(popup);
                 resultMsg.sendToTarget();
 
                 return true;
@@ -176,7 +170,7 @@ public class MainActivity extends Activity {
     }
 
     private void loadStartPage() {
-        if (!isValidWebAppUrl(startUrl)) {
+        if (!isValidStartUrl(startUrl)) {
             showConfigurationError();
             return;
         }
@@ -186,7 +180,7 @@ public class MainActivity extends Activity {
         webView.loadUrl(startUrl);
     }
 
-    private boolean isValidWebAppUrl(String value) {
+    private boolean isValidStartUrl(String value) {
         if (value == null || value.isEmpty()) {
             return false;
         }
@@ -195,20 +189,15 @@ public class MainActivity extends Activity {
 
         return "https".equalsIgnoreCase(uri.getScheme())
                 && uri.getHost() != null
-                && !uri.getHost().equalsIgnoreCase("example.invalid");
+                && !"example.invalid".equalsIgnoreCase(uri.getHost());
     }
 
-    private boolean isInternalWebAppUri(Uri uri) {
-        if (uri == null) {
+    private boolean isGoogleAppsScriptHost(Uri uri) {
+        if (uri == null || uri.getHost() == null) {
             return false;
         }
 
-        String scheme = safeLower(uri.getScheme());
-        String host = safeLower(uri.getHost());
-
-        if (!"https".equals(scheme) && !"http".equals(scheme)) {
-            return false;
-        }
+        String host = uri.getHost().toLowerCase(Locale.ROOT);
 
         return host.equals("script.google.com")
                 || host.endsWith(".script.google.com")
@@ -216,13 +205,13 @@ public class MainActivity extends Activity {
                 || host.endsWith(".script.googleusercontent.com");
     }
 
-    private boolean shouldOpenExternally(Uri uri) {
+    private boolean shouldOpenExternal(Uri uri) {
         if (uri == null) {
             return false;
         }
 
-        String scheme = safeLower(uri.getScheme());
-        String host = safeLower(uri.getHost());
+        String scheme = lower(uri.getScheme());
+        String host = lower(uri.getHost());
 
         if (
                 scheme.equals("tel")
@@ -231,6 +220,7 @@ public class MainActivity extends Activity {
                         || scheme.equals("smsto")
                         || scheme.equals("geo")
                         || scheme.equals("intent")
+                        || scheme.equals("whatsapp")
         ) {
             return true;
         }
@@ -243,26 +233,28 @@ public class MainActivity extends Activity {
                 host.equals("wa.me")
                         || host.endsWith(".wa.me")
                         || host.equals("api.whatsapp.com")
+                        || host.equals("web.whatsapp.com")
                         || host.endsWith(".whatsapp.com")
-                        || host.equals("whatsapp.com")
         ) {
             return true;
         }
 
         if (
                 host.equals("maps.google.com")
-                        || host.equals("www.google.com")
-                        || host.equals("google.com")
                         || host.equals("maps.app.goo.gl")
         ) {
-            String path = uri.getPath() == null ? "" : uri.getPath();
-            String query = uri.getQuery() == null ? "" : uri.getQuery();
-
-            return path.contains("maps")
-                    || query.contains("query=Cavalera");
+            return true;
         }
 
-        return !isInternalWebAppUri(uri);
+        if (host.equals("google.com") || host.equals("www.google.com")) {
+            String path = uri.getPath() == null ? "" : uri.getPath();
+
+            if (path.contains("/maps")) {
+                return true;
+            }
+        }
+
+        return !isGoogleAppsScriptHost(uri);
     }
 
     private void handlePopupUri(Uri uri) {
@@ -270,7 +262,7 @@ public class MainActivity extends Activity {
             return;
         }
 
-        if (isInternalWebAppUri(uri)) {
+        if (isGoogleAppsScriptHost(uri)) {
             webView.loadUrl(uri.toString());
             return;
         }
@@ -298,10 +290,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void showNetworkError(String detail) {
+    private void showNetworkError() {
         errorTitle.setText(R.string.error_title);
         errorMessage.setText(R.string.error_message);
-
         errorPanel.setVisibility(View.VISIBLE);
         webView.setVisibility(View.INVISIBLE);
         progressBar.setVisibility(View.GONE);
@@ -310,7 +301,6 @@ public class MainActivity extends Activity {
     private void showConfigurationError() {
         errorTitle.setText(R.string.config_error_title);
         errorMessage.setText(R.string.config_error_message);
-
         errorPanel.setVisibility(View.VISIBLE);
         webView.setVisibility(View.INVISIBLE);
         progressBar.setVisibility(View.GONE);
@@ -321,10 +311,8 @@ public class MainActivity extends Activity {
         webView.setVisibility(View.VISIBLE);
     }
 
-    private String safeLower(String value) {
-        return value == null
-                ? ""
-                : value.toLowerCase(Locale.ROOT);
+    private String lower(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
     private final class CavaleraWebViewClient extends WebViewClient {
@@ -336,7 +324,7 @@ public class MainActivity extends Activity {
         ) {
             Uri uri = request.getUrl();
 
-            if (shouldOpenExternally(uri)) {
+            if (shouldOpenExternal(uri)) {
                 openExternal(uri);
                 return true;
             }
@@ -351,7 +339,7 @@ public class MainActivity extends Activity {
         ) {
             Uri uri = Uri.parse(url);
 
-            if (shouldOpenExternally(uri)) {
+            if (shouldOpenExternal(uri)) {
                 openExternal(uri);
                 return true;
             }
@@ -381,11 +369,7 @@ public class MainActivity extends Activity {
                 WebResourceError error
         ) {
             if (request != null && request.isForMainFrame()) {
-                showNetworkError(
-                        error == null
-                                ? ""
-                                : String.valueOf(error.getDescription())
-                );
+                showNetworkError();
             }
         }
     }

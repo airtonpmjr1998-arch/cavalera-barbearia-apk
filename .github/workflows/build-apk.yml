@@ -20,11 +20,11 @@ jobs:
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v4
         with:
-          accept-android-sdk-licenses: yes
+          accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: false
           packages: ""
 
-      - name: Instalar SDK Android
+      - name: Instalar Android SDK
         shell: bash
         run: |
           sdkmanager \
